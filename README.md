@@ -20,8 +20,8 @@ more convenient methods, like stateful coroutines or C++ 20 coroutines.
 In addition, the test provides implementations of layered C++20 generators, using
 lazy fetching/flushing of data at the lowest layer. This test is implemented for:
 
-- Asio stackful coroutines (via spawn)
-- Asio stackless C++ 20 coroutines (via co_spawn)
+- Asio stackful coroutines (via `spawn()`)
+- Asio stackless C++ 20 coroutines (via `co_spawn()`)
 
 # Requirements
 - gcc 11
