@@ -5,11 +5,14 @@ This project implements a simple async server work-flow
 that "reads" a number of input buffers, process the data and
 then "writes" a number  of output buffers. 
 
-The same logic is implemented as:
+In other words, we aim to simulate typical memory usage of a server application - draining the CPU cache.
 
-- Asio stackful coroutines (via spawn)
+The same logic is implemented using:
+
 - Asio async methods with completion callbacks
-- Asio stackless C++ 20 coroutines (via co_spawn)
+- Asio stackful coroutines (via `spawn()`)
+- Asio legacy stackless coroutines
+- Asio stackless C++ 20 coroutines (via `co_spawn()`)
 
 The motivation is to measure the performance regression using the 
 more convenient methods, like stateful coroutines or C++ 20 coroutines. 
