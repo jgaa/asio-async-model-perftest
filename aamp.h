@@ -13,6 +13,7 @@ struct Config {
     uint64_t bufferSize = 1024 * 4;
     uint64_t numCharsBetweenWait = bufferSize * 3;
     int waitTimeMillisec = 1;
+    std::string reportPath;
 };
 
 extern Config config;
@@ -32,32 +33,17 @@ using approaches_t = std::vector<std::unique_ptr<Approach>>;
 void addAsioStackfulLazy(approaches_t& list);
 void addAsioStacklessLazy(approaches_t& list);
 void addAsioCallbacksEager(approaches_t& list);
+void addAsioCallbacksEagerAsyncPost(approaches_t& list);
 void addAsioStackfulEager(approaches_t& list);
 void addAsioStacklessEager(approaches_t& list);
-
-template <typename Context, typename Task, typename Token>
-auto post(Context&& context, const Task&& task, Token&& token) {
-    using result_type = typename boost::asio::async_result<std::decay_t<Token>,
-        void(boost::system::error_code)>;
-    typename result_type::completion_handler_type handler(std::forward<Token>(token));
-
-    result_type result(handler);
-
-    context.post([task, handler]() mutable {
-        task();
-        // Resume co-routine
-        handler(boost::system::error_code{});
-    });
-
-    return result.get ();
-}
+void addAsioCpp20CoroEager(approaches_t& list);
 
 template <typename Fn, typename CompletionToken, typename Executor>
 auto async_post(Executor&& executor, Fn&& fn, CompletionToken&& token) {
 
     auto initiation = [](auto && completionHandler, Executor& executor, Fn&& fn) mutable {
 
-        boost::asio::post([fn=std::move(fn), ch=std::move(completionHandler)]() mutable {
+        boost::asio::post(executor, [fn=std::move(fn), ch=std::move(completionHandler)]() mutable {
             fn();
             ch();
         });

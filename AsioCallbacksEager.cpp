@@ -18,6 +18,8 @@
 
 using namespace std;
 
+namespace {
+template <bool useNormalPost>
 class Session {
 public:
     Session(boost::asio::io_service& svc)
@@ -68,34 +70,36 @@ public:
             return;
         }
 
-        // Let's process the data
-        strand_.post([this]{
-            // Try to convince the compiler to not optimize away the nonsense loop
-            volatile char ch;
-            for(volatile auto c: buffer_) {
-                ch = c;
-            }
+        if constexpr (useNormalPost) {
+            // Let's process the data
+            strand_.post([this]{
+                // Try to convince the compiler to not optimize away the nonsense loop
+                volatile char ch;
+                for(volatile auto c: buffer_) {
+                    ch = c;
+                }
 
-            // Now, start replying
-            asyncWrite([this] (auto data){
-               onWritten();
+                // Now, start replying
+                asyncWrite([this] (auto data){
+                   onWritten();
+                });
             });
-        });
-
-        // Same as above, but using a completion function via the generic async_post()
-        // Gives us an opportunity to measure it's overhead
-//        async_post(strand_, [this] {
-//            // Try to convince the compiler to not optimize away the nonsense loop
-//            volatile char ch;
-//            for(volatile auto c: buffer_) {
-//                ch = c;
-//            }
-//        }, [this] () mutable {
-//            // Now, start replying
-//            asyncWrite([this] (auto data){
-//               onWritten();
-//            });
-//        });
+        } else {
+            // Same as above, but using a completion function via the generic async_post()
+            // Gives us an opportunity to measure it's overhead
+            async_post(strand_, [this] {
+                // Try to convince the compiler to not optimize away the nonsense loop
+                volatile char ch;
+                for(volatile auto c: buffer_) {
+                    ch = c;
+                }
+            }, [this] () mutable {
+                // Now, start replying
+                asyncWrite([this] (auto data){
+                   onWritten();
+                });
+            });
+        }
     }
 
     void go() {
@@ -113,13 +117,14 @@ private:
     boost::asio::deadline_timer timer_;
     std::vector<char> buffer_;
 };
+}
 
-
+template <bool useNormalPost>
 class AsioCallbacksEager : public Approach {
 public:
     void go() override {
         boost::asio::io_service svc;
-        std::forward_list<Session> sessions;
+        std::forward_list<Session<useNormalPost>> sessions;
         for(auto i = 0; i < config.numSessions; ++i) {
             sessions.emplace_front(svc);
             sessions.front().go();
@@ -129,10 +134,14 @@ public:
      }
 
     string name() const override {
-        return "AsioCallbacksEager";
+        return useNormalPost ? "AsioCallbacksEager" : "AsioCallbacksEagerAsyncPost";
     }
 };
 
 void addAsioCallbacksEager(approaches_t& list) {
-    list.push_back(make_unique<AsioCallbacksEager>());
+    list.push_back(make_unique<AsioCallbacksEager<true>>());
+}
+
+void addAsioCallbacksEagerAsyncPost(approaches_t& list) {
+    list.push_back(make_unique<AsioCallbacksEager<false>>());
 }

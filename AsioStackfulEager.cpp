@@ -18,6 +18,7 @@
 
 using namespace std;
 
+namespace {
 class Session {
 public:
     Session(boost::asio::io_service& svc)
@@ -60,7 +61,7 @@ private:
     std::vector<char> buffer_;
     boost::asio::io_service& svc_;
 };
-
+}
 
 class AsioStackfulEager : public Approach {
 public:

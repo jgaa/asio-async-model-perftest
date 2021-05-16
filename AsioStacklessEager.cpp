@@ -8,68 +8,67 @@
 #include <algorithm>
 #include <optional>
 #include <forward_list>
+#include <syncstream>
 
 #include <boost/asio.hpp>
-#include <boost/asio/spawn.hpp>
-#include <boost/asio/awaitable.hpp>
+#include <boost/asio/yield.hpp>
 
 #include "aamp.h"
 
 using namespace std;
 
-class Session {
+namespace {
+class Session : public boost::asio::coroutine {
 public:
     Session(boost::asio::io_service& svc)
         : buffer_(config.bufferSize)
-        , svc_{svc}
         , strand_{svc}
+        , timer_{strand_.context().get_executor()}
+        , work_{svc}
     {}
 
-    boost::asio::awaitable<void> start() {
-
-        // "Read" the input
-        for(decltype(config.numBuffers) i = {}; i < config.numBuffers; ++i){
-            buffer_.clear();
-            boost::asio::deadline_timer timer{svc_};
-            timer.expires_from_now(boost::posix_time::millisec(config.waitTimeMillisec));
-            co_await timer.async_wait(boost::asio::use_awaitable);
-            buffer_.resize(config.bufferSize);
-            ranges::fill(buffer_, static_cast<char>(time(nullptr)));
-        }
-
-        // Process the data
-        auto& b = buffer_;
-        co_await async_post(strand_, [&b]() mutable {
-            volatile char ch;
-            for(const auto c: b) {
-                ch = c;
+    void operator()(boost::system::error_code ec = {}) {
+        reenter (this) {
+            for(;i_ < config.numBuffers; ++i_) {
+                ++i_;
+                buffer_.clear();
+                timer_.expires_from_now(boost::posix_time::millisec(config.waitTimeMillisec));
+                yield timer_.async_wait(std::ref(*this));
+                buffer_.resize(config.bufferSize);
+                ranges::fill(buffer_, static_cast<char>(time(nullptr)));
             }
-        }, boost::asio::use_awaitable);
 
+            yield async_post(strand_, [this]() mutable {
+                        volatile char ch;
+                        for(const auto c: buffer_) {
+                            ch = c;
+                        }
+            }, std::ref(*this));
 
-        // "Write" the output
-        for(decltype(config.numBuffers) i = {}; i < config.numBuffers; ++i){
-            boost::asio::deadline_timer timer{svc_};
-            timer.expires_from_now(boost::posix_time::millisec(config.waitTimeMillisec));
-            co_await timer.async_wait(boost::asio::use_awaitable);
-            fill(buffer_.begin(), buffer_.end(), static_cast<char>(time(nullptr)));
+            i_ = 0;
+
+            for(;i_ < config.numBuffers; ++i_) {
+                timer_.expires_from_now(boost::posix_time::millisec(config.waitTimeMillisec));
+                yield timer_.async_wait(std::ref(*this));
+                fill(buffer_.begin(), buffer_.end(), static_cast<char>(time(nullptr)));
+            }
+
+            work_.reset();
         }
-
-        co_return;
     }
 
     void go() {
-        boost::asio::co_spawn(strand_.context().get_executor(), [this] () mutable  {
-            return start();
-        }, boost::asio::detached);
+        operator()();
     }
 
 private:
     std::vector<char> buffer_;
-    boost::asio::io_service& svc_;
     boost::asio::io_service::strand strand_;
+    boost::asio::deadline_timer timer_;
+    decltype (config.numBuffers) i_ = {};
+    std::optional<boost::asio::io_service::work> work_;
 };
-
+}
 
 class AsioStacklessEager : public Approach {
 public:

@@ -1,8 +1,12 @@
 
 #include <vector>
 #include <iostream>
+#include <fstream>
 #include <thread>
 #include <filesystem>
+
+#include <sys/time.h>
+#include <sys/resource.h>
 
 #include <boost/asio.hpp>
 #include <boost/asio/spawn.hpp>
@@ -24,11 +28,17 @@ int main(int argc, char **argv) {
     }
 
     approaches_t approaches;
-    addAsioStackfulLazy(approaches);
-    addAsioStacklessLazy(approaches);
+    // Eager
     addAsioCallbacksEager(approaches);
+    addAsioCallbacksEagerAsyncPost(approaches);
     addAsioStackfulEager(approaches);
     addAsioStacklessEager(approaches);
+    addAsioCpp20CoroEager(approaches);
+
+    // Lazy
+    addAsioStackfulLazy(approaches);
+    addAsioStacklessLazy(approaches);
+
 
     namespace po = boost::program_options;
     po::options_description general("Options");
@@ -55,6 +65,9 @@ int main(int argc, char **argv) {
         ("sleep-time",
             po::value<int>(&config.waitTimeMillisec)->default_value(config.waitTimeMillisec),
             "Number of milliseconds to sleep.")
+        ("report-path,r",
+            po::value<string>(&config.reportPath)->default_value(config.reportPath),
+            "CSV file where to append the results")
         ;
 
     po::options_description cmdline_options;
@@ -90,6 +103,47 @@ int main(int argc, char **argv) {
 
     cout << "Exceuting " << approaches.at(config.approach)->name() << endl;
     approaches.at(config.approach)->go();
+
+    rusage ru = {};
+    getrusage(RUSAGE_SELF, &ru);
+
+    cout << "cputime=" << (ru.ru_utime.tv_sec + ru.ru_utime.tv_usec / 1000000.0)
+         << ", system=" << (ru.ru_stime.tv_sec + ru.ru_stime.tv_usec / 1000000.0)
+         << ", minflt=" << ru.ru_minflt
+         << ", majflt=" << ru.ru_majflt
+         << ", nswap=" << ru.ru_nswap
+         << ", nsignals=" << ru.ru_nsignals
+         << ", nvcsw=" << ru.ru_nvcsw
+         << ", nivcsw=" << ru.ru_nivcsw
+         << ", maxrss=" << ru.ru_maxrss
+         << ", ixrss=" << ru.ru_ixrss
+         << ", idrss=" << ru.ru_idrss
+         << ", isrss=" << ru.ru_isrss
+         << endl;
+
+    if (!config.reportPath.empty()) {
+        if (!filesystem::is_regular_file(config.reportPath)) {
+            ofstream hdr{config.reportPath};
+            hdr << "Approach, cputime, system, minflt, majflt, nswap, "
+                << "nsignals, nvcsw, nivcsw, maxrss, ixrss, idrss, isrss" << endl;
+        }
+
+        ofstream data{config.reportPath, ::ios_base::app};
+        data << approaches.at(config.approach)->name()
+             << "," << (ru.ru_utime.tv_sec + ru.ru_utime.tv_usec / 1000000.0)
+             << "," << (ru.ru_stime.tv_sec + ru.ru_stime.tv_usec / 1000000.0)
+             << "," << ru.ru_minflt
+             << "," << ru.ru_majflt
+             << "," << ru.ru_nswap
+             << "," << ru.ru_nsignals
+             << "," << ru.ru_nvcsw
+             << "," << ru.ru_nivcsw
+             << "," << ru.ru_maxrss
+             << "," << ru.ru_ixrss
+             << "," << ru.ru_idrss
+             << "," << ru.ru_isrss
+             << endl;
+    }
 
     cout << "Done" << endl;
     return 0;

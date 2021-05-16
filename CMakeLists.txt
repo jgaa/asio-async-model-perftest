@@ -1,17 +1,20 @@
-cmake_minimum_required(VERSION 3.19)
+cmake_minimum_required(VERSION 3.20)
 
 
 project (aamp VERSION 0.0.1 LANGUAGES CXX)
 message(STATUS "Using ${CMAKE_CXX_COMPILER}")
 
-# TODO: Make general
-include_directories(/opt/gcc-11/include/c++/11.1.0/)
+if (GCC11_INCLUDE_DIR)
+    include_directories(${GCC11_INCLUDE_DIR})
+endif()
 
 message(STATUS "Configuring ${PROJECT_NAME} version ${PROJECT_VERSION}")
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
+add_definitions(-DBOOST_COROUTINES_NO_DEPRECATION_WARNING -DBoost_NO_WARN_NEW_VERSIONS=ON)
 
 find_package(Boost 1.75 REQUIRED COMPONENTS
     system
@@ -23,9 +26,6 @@ find_package(Boost 1.75 REQUIRED COMPONENTS
     )
 
 include_directories(${Boost_INCLUDE_DIR})
-
-# Work-around for deplicated warning from boost about boost
-add_definitions(-DBOOST_COROUTINES_NO_DEPRECATION_WARNING)
 
 option(BOOST_ERROR_CODE_HEADER_ONLY "Work-around for another boost issue" ON)
 if (BOOST_ERROR_CODE_HEADER_ONLY)
@@ -43,6 +43,7 @@ add_executable(${PROJECT_NAME}
   AsioStaclessLazy.cpp
   AsioStackfulEager.cpp
   AsioStacklessEager.cpp
+  AsioCpp20CoroEager.cpp
   aamp.h
   main.cpp
   util.cpp

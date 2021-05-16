@@ -20,6 +20,7 @@
 
 using namespace std;
 
+namespace {
 // From C++ High Performance C++, 2. edition
 template <typename T>
 class Generator {
@@ -154,7 +155,7 @@ Generator<T> transformBuffersToChar(InRange data) {
         }
     }
 }
-
+}
 //
 class StackfulSession {
 public:

@@ -19,7 +19,7 @@
 #include "aamp.h"
 
 using namespace std;
-
+namespace {
 struct StacklessSession {
     using ch_awaitable_t = boost::asio::awaitable<char>;
     using span_awaitable_t = boost::asio::awaitable<std::span<char>>;
@@ -126,6 +126,7 @@ public:
 
     boost::asio::io_service::strand strand;
 };
+}
 
 class AsioStacklessLazy : public Approach {
 public:
