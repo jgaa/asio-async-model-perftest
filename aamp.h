@@ -41,14 +41,11 @@ void addAsioCpp20CoroEager(approaches_t& list);
 template <typename Fn, typename CompletionToken, typename Executor>
 auto async_post(Executor&& executor, Fn&& fn, CompletionToken&& token) {
 
-    auto initiation = [](auto && completionHandler, Executor& executor, Fn&& fn) mutable {
-
-        boost::asio::post(executor, [fn=std::move(fn), ch=std::move(completionHandler)]() mutable {
+    return boost::asio::async_compose<CompletionToken, void()>([&executor, fn=std::move(fn)](auto& self) mutable {
+        boost::asio::post(executor, [fn=std::move(fn), &self]() mutable {
             fn();
-            ch();
+            self.complete();
         });
-    };
-
-    return boost::asio::async_initiate<CompletionToken, void()> (
-                initiation, token, std::ref(executor), std::move(fn));
+        ;
+    }, token, executor);
 }
