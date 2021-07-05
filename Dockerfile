@@ -36,15 +36,18 @@ RUN curl -L -o /tmp/boost.tar.gz https://boostorg.jfrog.io/artifactory/main/rele
 RUN cd /src && tar -xf /tmp/boost.tar.gz
 RUN . ~/.bashrc && cd /src/boost_1_76_0 && ./bootstrap.sh && ./b2
 
+RUN echo teste
 # Build our app
-RUN echo
 RUN apt-get install -y -q cmake
 RUN  cd /src && git clone https://github.com/jgaa/asio-async-model-perftest.git
-RUN . ~/.bashrc && mkdir /src/build && cd /src/build && cmake -DBOOST_ROOT=/src/boost_1_76_0  ../asio-async-model-perftest && make -j `nproc`
+RUN . ~/.bashrc && mkdir /src/build && cd /src/build && cmake -DBOOST_ROOT=/src/boost_1_76_0  ../asio-async-model-perftest && make -j `nproc` && chmod +x /src/asio-async-model-perftest/run-all.sh
 
 ENV LD_LIBRARY_PATH=/src/boost_1_76_0/stage/lib:/usr/local/gcc-11/lib64/ 
 
-RUN cp /src/build/bin/aamp /usr/local/bin
+RUN cp /src/build/bin/aamp /src/asio-async-model-perftest/run-all.sh /usr/local/bin
 
-# Run our app with default arguments
-CMD aamp
+USER nobody
+
+# Run all tests
+CMD run-all.sh
+
