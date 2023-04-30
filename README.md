@@ -24,10 +24,19 @@ lazy fetching/flushing of data at the lowest layer. This test is implemented for
 - Asio stackless C++ 20 coroutines (via `co_spawn()`)
 
 # Requirements
-- gcc 11
+- gcc 11 or newer
 - Boost 1.76.0 or newer
 
 # Status
 In progress. Once done, I will post results and graphs with results from a
 number of hardware configurations. 
 
+# Run all tests:
+
+Example on how to run all the performance-tests.
+
+From the build/bin directory with boost in `/opt/boost/boost_1_82_0`:
+```sh
+LD_LIBRARY_PATH=/opt/boost/boost_1_82_0/stage/lib PATH="$PATH:."  bash ~/src/asio-async-model-perftest/run-all.sh
+
+```
