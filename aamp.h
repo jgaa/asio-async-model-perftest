@@ -2,6 +2,7 @@
 
 #include <string>
 #include <thread>
+#include <iostream>
 
 #include <boost/asio.hpp>
 
@@ -42,7 +43,7 @@ template <typename Fn, typename CompletionToken, typename Executor>
 auto async_post(Executor&& executor, Fn&& fn, CompletionToken&& token) {
 
     return boost::asio::async_compose<CompletionToken, void()>([&executor, fn=std::move(fn)](auto& self) mutable {
-        boost::asio::post(executor, [fn=std::move(fn), &self]() mutable {
+        boost::asio::post(executor, [fn=std::move(fn), self=std::move(self)]() mutable {
             fn();
             self.complete();
         });
