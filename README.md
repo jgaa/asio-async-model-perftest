@@ -25,7 +25,7 @@ lazy fetching/flushing of data at the lowest layer. This test is implemented for
 
 # Requirements
 - gcc 11 or newer
-- Boost 1.76.0 or newer
+- Boost 1.76.0 or newer (1.81 is broken, 1.82 works).
 
 # Status
 In progress. Once done, I will post results and graphs with results from a
