@@ -18,19 +18,22 @@
 using namespace std;
 
 namespace {
-class Session : public boost::asio::coroutine {
+class Session {
 public:
     Session(boost::asio::io_service& svc)
         : buffer_(config.bufferSize)
         , strand_{svc}
         , timer_{strand_.context().get_executor()}
         , work_{svc}
-    {}
+    {
+    }
+
+    ~Session() {
+    }
 
     void operator()(boost::system::error_code ec = {}) {
-        reenter (this) {
+        reenter (coro_) {
             for(;i_ < config.numBuffers; ++i_) {
-                ++i_;
                 buffer_.clear();
                 timer_.expires_from_now(boost::posix_time::millisec(config.waitTimeMillisec));
                 yield timer_.async_wait(std::ref(*this));
@@ -62,6 +65,7 @@ public:
     }
 
 private:
+    boost::asio::coroutine coro_;
     std::vector<char> buffer_;
     boost::asio::io_service::strand strand_;
     boost::asio::deadline_timer timer_;

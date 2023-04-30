@@ -8,6 +8,7 @@
 #include <sys/time.h>
 #include <sys/resource.h>
 
+#include <boost/version.hpp>
 #include <boost/asio.hpp>
 #include <boost/asio/spawn.hpp>
 #include <boost/asio/awaitable.hpp>
@@ -91,7 +92,7 @@ int main(int argc, char **argv) {
     const auto totalBytes = sessionBytes * config.numSessions;
     const auto totalSleep = (totalBytes / config.numCharsBetweenWait) * config.waitTimeMillisec;
 
-    cout << "Starting up." << endl
+    cout << "Starting up (using boost " << BOOST_LIB_VERSION << ")." << endl
          << "Will run " << format(config.numSessions) << " sessions using "
          << format(config.numThreads) << " thread(s), each manipulating "
          << format(sessionBytes) << " bytes" << endl

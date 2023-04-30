@@ -190,7 +190,7 @@ public:
      }
 
     string name() const override {
-        return "AsioStackfulLazy";
+        return "AsioStackfullLazy";
     }
 };
 

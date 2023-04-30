@@ -77,7 +77,7 @@ public:
      }
 
     string name() const override {
-        return "AsioStackfulEager";
+        return "AsioStackfullEager";
     }
 };
 
